@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Road Trip Games — Orange Beach!</title>
+  <meta name="theme-color" content="#0e7490" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Trip Games" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #0c4a6e 0%, #0e7490 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top, 16px) 16px 0;
+    }
+
+    header {
+      text-align: center;
+      padding: 18px 0 10px;
+    }
+    header h1 { font-size: 24px; letter-spacing: -0.5px; }
+    header .sub { color: #a5e8f5; font-size: 13px; margin-top: 2px; }
+
+    main { flex: 1; padding-bottom: 90px; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ---------- Bottom nav ---------- */
+    nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      display: flex;
+      background: rgba(8, 47, 73, 0.97);
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      z-index: 50;
+    }
+    nav button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #7dd3e8;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 10px 2px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    nav button .ico { font-size: 22px; }
+    nav button.on { color: #fde047; }
+
+    /* ---------- Shared bits ---------- */
+    .card {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .btn {
+      background: #fde047;
+      color: #713f12;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.ghost {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 700;
+    }
+    .row { display: flex; gap: 10px; }
+    .row .btn { flex: 1; }
+    h2 { font-size: 18px; margin-bottom: 10px; }
+    .hint { color: #a5e8f5; font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+
+    /* ---------- Bingo ---------- */
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .bingo-cell {
+      aspect-ratio: 1;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .bingo-cell .em { font-size: 30px; line-height: 1; }
+    .bingo-cell .lbl { font-size: 10px; font-weight: 700; color: #d6f3fa; line-height: 1.15; }
+    .bingo-cell.hit {
+      background: #16a34a;
+      border-color: #4ade80;
+    }
+    .bingo-cell.hit .lbl { color: #fff; }
+    .banner {
+      background: #fde047;
+      color: #713f12;
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 14px;
+      display: none;
+      animation: pop 0.4s ease;
+    }
+    .banner.show { display: block; }
+    @keyframes pop {
+      0% { transform: scale(0.6); opacity: 0; }
+      70% { transform: scale(1.06); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ---------- Plates ---------- */
+    .plate-count {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fde047;
+      margin-bottom: 12px;
+    }
+    .plates {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .plate {
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      padding: 10px 4px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .plate.hit { background: #16a34a; border-color: #4ade80; }
+
+    /* ---------- Trivia ---------- */
+    .q-text { font-size: 18px; font-weight: 700; line-height: 1.4; margin-bottom: 16px; }
+    .answers { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .ans {
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+    .ans.right { background: #16a34a; border-color: #4ade80; }
+    .ans.wrong { background: #dc2626; border-color: #f87171; }
+    .trivia-score { text-align: center; color: #fde047; font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+
+    /* ---------- Would You Rather ---------- */
+    .wyr-card {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 26px 20px;
+      text-align: center;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.5;
+      margin-bottom: 16px;
+      min-height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ---------- Scoreboard ---------- */
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .player input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      outline: none;
+      min-width: 0;
+    }
+    .player .score {
+      font-size: 22px;
+      font-weight: 900;
+      color: #fde047;
+      min-width: 44px;
+      text-align: center;
+    }
+    .player .pm {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      border-radius: 10px;
+      width: 42px;
+      height: 42px;
+      font-size: 22px;
+      font-weight: 800;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🏖️ Road Trip Games</h1>
+    <div class="sub">Next stop: Orange Beach, Alabama!</div>
+  </header>
+
+  <main>
+    <!-- BINGO -->
+    <section class="screen active" id="scr-bingo">
+      <div class="banner" id="bingo-banner">🎉 BINGO! 🎉</div>
+      <p class="hint">Spot it out the window, tap the square. Four in a row wins — pass the phone and deal a new card for the next player!</p>
+      <div class="bingo-grid" id="bingo-grid"></div>
+      <button class="btn ghost" id="bingo-new">🔀 New Card</button>
+    </section>
+
+    <!-- PLATES -->
+    <section class="screen" id="scr-plates">
+      <p class="hint">Whole-car team game: tap each state when someone spots its license plate. See how many you collect before the beach!</p>
+      <div class="plate-count" id="plate-count"></div>
+      <div class="plates" id="plates"></div>
+      <button class="btn ghost" id="plates-reset" style="margin-top:14px;">Start Over</button>
+    </section>
+
+    <!-- TRIVIA -->
+    <section class="screen" id="scr-trivia">
+      <div class="trivia-score" id="trivia-score"></div>
+      <div class="card">
+        <div class="q-text" id="q-text"></div>
+        <div class="answers" id="answers"></div>
+        <button class="btn" id="next-q" style="display:none;">Next Question →</button>
+      </div>
+      <p class="hint">Take turns — reader asks the question out loud, everyone shouts an answer, then tap to check!</p>
+    </section>
+
+    <!-- WOULD YOU RATHER -->
+    <section class="screen" id="scr-wyr">
+      <p class="hint">Read it out loud — everyone has to pick a side AND say why. No fair saying "neither"!</p>
+      <div class="wyr-card" id="wyr-card"></div>
+      <button class="btn" id="wyr-next">Next Card 🎴</button>
+    </section>
+
+    <!-- SCOREBOARD -->
+    <section class="screen" id="scr-score">
+      <p class="hint">Tap a name to change it. Give points for bingo wins, trivia answers, best "would you rather" reasons — whatever the car rules!</p>
+      <div id="players"></div>
+      <button class="btn ghost" id="score-reset">Reset Scores</button>
+    </section>
+  </main>
+
+  <nav>
+    <button data-scr="bingo" class="on"><span class="ico">🎯</span>Bingo</button>
+    <button data-scr="plates"><span class="ico">🚗</span>Plates</button>
+    <button data-scr="trivia"><span class="ico">🧠</span>Trivia</button>
+    <button data-scr="wyr"><span class="ico">🤔</span>Rather</button>
+    <button data-scr="score"><span class="ico">🏆</span>Score</button>
+  </nav>
+</div>
+
+<script>
+  const store = {
+    get(k, fallback) {
+      try { const v = localStorage.getItem('rtg-' + k); return v ? JSON.parse(v) : fallback; }
+      catch { return fallback; }
+    },
+    set(k, v) { localStorage.setItem('rtg-' + k, JSON.stringify(v)); }
+  };
+
+  /* ---------- Navigation ---------- */
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('on'));
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      btn.classList.add('on');
+      document.getElementById('scr-' + btn.dataset.scr).classList.add('active');
+    });
+  });
+
+  /* ---------- Trip Bingo ---------- */
+  const BINGO_POOL = [
+    ['🐄', 'Cow'], ['🐎', 'Horse'], ['🚜', 'Tractor'], ['🚛', '18-Wheeler'],
+    ['🏍️', 'Motorcycle'], ['🚐', 'RV / Camper'], ['🚓', 'Police Car'], ['🚑', 'Ambulance'],
+    ['⛽', 'Gas Station'], ['🌉', 'Bridge'], ['🗼', 'Water Tower'], ['⛪', 'Church'],
+    ['🏫', 'School'], ['🍔', 'Fast Food Sign'], ['🌽', 'Corn Field'], ['🚂', 'Train'],
+    ['✈️', 'Airplane'], ['🦅', 'Big Bird'], ['🐕', 'Dog in a Car'], ['🚧', 'Road Work'],
+    ['🏖️', 'Beach Billboard'], ['🌴', 'Palm Tree'], ['⛵', 'Boat'], ['🎣', 'Fishing Sign'],
+    ['🇺🇸', 'American Flag'], ['🏨', 'Hotel Sign'], ['🍦', 'Ice Cream Sign'], ['🛻', 'Truck Towing a Boat'],
+    ['💛', 'Yellow Car'], ['🚌', 'School Bus'], ['🏥', 'Hospital Sign'], ['🌻', 'Field of Flowers']
+  ];
+
+  let bingoCard = store.get('bingo-card', null);
+  let bingoHits = store.get('bingo-hits', []);
+
+  function dealBingo() {
+    const pool = [...BINGO_POOL];
+    const picks = [];
+    for (let i = 0; i < 16; i++) {
+      picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    bingoCard = picks;
+    bingoHits = [];
+    store.set('bingo-card', bingoCard);
+    store.set('bingo-hits', bingoHits);
+    document.getElementById('bingo-banner').classList.remove('show');
+    renderBingo();
+  }
+
+  function checkBingo() {
+    const h = i => bingoHits.includes(i);
+    const lines = [];
+    for (let r = 0; r < 4; r++) lines.push([r*4, r*4+1, r*4+2, r*4+3]);
+    for (let c = 0; c < 4; c++) lines.push([c, c+4, c+8, c+12]);
+    lines.push([0, 5, 10, 15], [3, 6, 9, 12]);
+    return lines.some(line => line.every(h));
+  }
+
+  function renderBingo() {
+    const grid = document.getElementById('bingo-grid');
+    grid.innerHTML = '';
+    bingoCard.forEach(([em, lbl], i) => {
+      const cell = document.createElement('div');
+      cell.className = 'bingo-cell' + (bingoHits.includes(i) ? ' hit' : '');
+      cell.innerHTML = `<div class="em">${em}</div><div class="lbl">${lbl}</div>`;
+      cell.addEventListener('click', () => {
+        const idx = bingoHits.indexOf(i);
+        if (idx >= 0) bingoHits.splice(idx, 1); else bingoHits.push(i);
+        store.set('bingo-hits', bingoHits);
+        cell.classList.toggle('hit');
+        document.getElementById('bingo-banner').classList.toggle('show', checkBingo());
+      });
+      grid.appendChild(cell);
+    });
+    document.getElementById('bingo-banner').classList.toggle('show', checkBingo());
+  }
+
+  document.getElementById('bingo-new').addEventListener('click', dealBingo);
+  if (bingoCard) renderBingo(); else dealBingo();
+
+  /* ---------- License Plate Hunt ---------- */
+  const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+  let plateHits = store.get('plates', []);
+
+  function renderPlates() {
+    const wrap = document.getElementById('plates');
+    wrap.innerHTML = '';
+    STATES.forEach(st => {
+      const el = document.createElement('div');
+      el.className = 'plate' + (plateHits.includes(st) ? ' hit' : '');
+      el.textContent = st;
+      el.addEventListener('click', () => {
+        const idx = plateHits.indexOf(st);
+        if (idx >= 0) plateHits.splice(idx, 1); else plateHits.push(st);
+        store.set('plates', plateHits);
+        el.classList.toggle('hit');
+        updatePlateCount();
+      });
+      wrap.appendChild(el);
+    });
+    updatePlateCount();
+  }
+
+  function updatePlateCount() {
+    document.getElementById('plate-count').textContent = `${plateHits.length} of 50 states spotted`;
+  }
+
+  document.getElementById('plates-reset').addEventListener('click', () => {
+    if (confirm('Clear all spotted plates?')) {
+      plateHits = [];
+      store.set('plates', plateHits);
+      renderPlates();
+    }
+  });
+  renderPlates();
+
+  /* ---------- Beach Trivia ---------- */
+  const TRIVIA = [
+    ['What ocean creature has eight arms?', ['Octopus', 'Starfish', 'Crab', 'Jellyfish'], 0],
+    ['What is Alabama\'s nickname?', ['The Heart of Dixie', 'The Sunshine State', 'The Peach State', 'The Lone Star State'], 0],
+    ['Which body of water is Orange Beach on?', ['Gulf of Mexico', 'Atlantic Ocean', 'Pacific Ocean', 'Lake Michigan'], 0],
+    ['What do you call a baby sea turtle?', ['A hatchling', 'A puppy', 'A cub', 'A fry'], 0],
+    ['Which of these makes the sand at Orange Beach so white?', ['Quartz crystals', 'Crushed seashells', 'Salt', 'Chalk'], 0],
+    ['How many legs does a crab have?', ['10', '6', '8', '12'], 0],
+    ['What is the state bird of Alabama?', ['Yellowhammer', 'Cardinal', 'Blue Jay', 'Pelican'], 0],
+    ['What makes ocean water taste different from lake water?', ['Salt', 'Sugar', 'Sand', 'Fish'], 0],
+    ['Which animal is famous for building sandcastles... just kidding! Which animal digs holes on the beach?', ['Ghost crab', 'Dolphin', 'Seagull', 'Whale'], 0],
+    ['What do dolphins breathe through?', ['A blowhole', 'Gills', 'Their mouth', 'Their fins'], 0],
+    ['What is the capital of Alabama?', ['Montgomery', 'Birmingham', 'Mobile', 'Huntsville'], 0],
+    ['Which of these is NOT a real fish?', ['Chocolate fish', 'Catfish', 'Swordfish', 'Clownfish'], 0],
+    ['What causes waves in the ocean?', ['Wind', 'Fish swimming', 'Boats', 'Rain'], 0],
+    ['What color is a live flamingo\'s food that turns it pink?', ['Pink (shrimp & algae)', 'Blue', 'Green', 'Purple'], 0],
+    ['How many hearts does an octopus have?', ['3', '1', '2', '8'], 0],
+    ['What sea creature can regrow a lost arm?', ['Starfish', 'Shark', 'Dolphin', 'Sea turtle'], 0],
+    ['Which state is directly east of Orange Beach?', ['Florida', 'Georgia', 'Mississippi', 'Texas'], 0],
+    ['What do you call a group of fish?', ['A school', 'A class', 'A flock', 'A herd'], 0],
+    ['What famous rocket city is in Alabama?', ['Huntsville', 'Tuscaloosa', 'Auburn', 'Selma'], 0],
+    ['Seagulls would rather steal your...', ['French fries', 'Homework', 'Sunscreen', 'Flip flops'], 0],
+    ['What is the biggest animal on Earth?', ['Blue whale', 'Elephant', 'Great white shark', 'Giraffe'], 0],
+    ['Sand dollars are actually...', ['Sea animals', 'Money', 'Rocks', 'Plants'], 0],
+    ['What should you do if a jellyfish is on the beach?', ['Leave it alone', 'Pick it up', 'Poke it', 'Take it home'], 0],
+    ['Which one sleeps with one eye open?', ['Dolphin', 'Crab', 'Seagull', 'Sea turtle'], 0],
+    ['Mobile Bay is famous for what sweet crustacean catch?', ['Shrimp', 'Lobster', 'Crawfish', 'Krill'], 0]
+  ];
+
+  let qOrder = [], qPos = 0, triviaRight = 0, triviaTotal = 0, answered = false;
+
+  function shuffleTrivia() {
+    qOrder = TRIVIA.map((_, i) => i);
+    for (let i = qOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [qOrder[i], qOrder[j]] = [qOrder[j], qOrder[i]];
+    }
+    qPos = 0;
+  }
+
+  function showQuestion() {
+    if (qPos >= qOrder.length) shuffleTrivia();
+    const [q, answers, rightIdx] = TRIVIA[qOrder[qPos]];
+    answered = false;
+    document.getElementById('q-text').textContent = q;
+    document.getElementById('next-q').style.display = 'none';
+    document.getElementById('trivia-score').textContent =
+      triviaTotal ? `Car score: ${triviaRight} / ${triviaTotal}` : 'First question — good luck!';
+
+    const order = answers.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    const wrap = document.getElementById('answers');
+    wrap.innerHTML = '';
+    order.forEach(ai => {
+      const b = document.createElement('button');
+      b.className = 'ans';
+      b.textContent = answers[ai];
+      b.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        triviaTotal++;
+        if (ai === rightIdx) { triviaRight++; b.classList.add('right'); }
+        else {
+          b.classList.add('wrong');
+          [...wrap.children].forEach(c => {
+            if (c.textContent === answers[rightIdx]) c.classList.add('right');
+          });
+        }
+        document.getElementById('trivia-score').textContent = `Car score: ${triviaRight} / ${triviaTotal}`;
+        document.getElementById('next-q').style.display = 'block';
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  document.getElementById('next-q').addEventListener('click', () => { qPos++; showQuestion(); });
+  shuffleTrivia();
+  showQuestion();
+
+  /* ---------- Would You Rather ---------- */
+  const WYR = [
+    'Would you rather build the world\'s biggest sandcastle 🏰 or find a real message in a bottle 📜?',
+    'Would you rather ride a dolphin 🐬 or fly with a pelican 🦤?',
+    'Would you rather eat ice cream for every meal 🍦 or pizza for every meal 🍕?',
+    'Would you rather have sand in your shoes forever 👟 or always have a wet swimsuit 👙?',
+    'Would you rather be a mermaid 🧜‍♀️ or a pirate 🏴‍☠️?',
+    'Would you rather sleep in a beach tent ⛺ or a giant hammock 🌴?',
+    'Would you rather find a shark tooth 🦈 or a perfect sand dollar 💵?',
+    'Would you rather only walk backwards on the beach 🚶 or only hop on one foot 🦶?',
+    'Would you rather have a pet crab 🦀 or a pet seagull 🕊️?',
+    'Would you rather swim in Jell-O 🍮 or a pool of marshmallows ☁️?',
+    'Would you rather sing every word you say for a day 🎤 or dance everywhere you walk 💃?',
+    'Would you rather have unlimited beach toys 🏖️ or unlimited snacks for the car 🍿?',
+    'Would you rather see fireworks over the ocean 🎆 or a double rainbow 🌈?',
+    'Would you rather be able to talk to fish 🐠 or to birds 🦜?',
+    'Would you rather stay up all night 🌙 or wake up at sunrise for the beach 🌅?',
+    'Would you rather ride every waterslide once 💦 or your favorite one ten times?',
+    'Would you rather have grandma pick the music 🎵 or drive straight through with no stops 🚗?',
+    'Would you rather find $20 in the sand 💰 or the prettiest seashell ever 🐚?',
+    'Would you rather be sticky forever 🍯 or itchy forever 🐜?',
+    'Would you rather eat a whole lemon 🍋 or a raw onion 🧅?',
+    'Would you rather have a beach day with dolphins nearby 🐬 or a pool day with a diving board 🏊?',
+    'Would you rather live in a lighthouse 🗼 or on a houseboat 🚤?',
+    'Would you rather everyone in the car sings one song together 🎶 or everyone tells their funniest story 😂?',
+    'Would you rather have flip-flops that squeak 🩴 or a sun hat that\'s three sizes too big 👒?'
+  ];
+
+  let wyrOrder = [], wyrPos = 0;
+  function shuffleWyr() {
+    wyrOrder = WYR.map((_, i) => i);
+    for (let i = wyrOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [wyrOrder[i], wyrOrder[j]] = [wyrOrder[j], wyrOrder[i]];
+    }
+    wyrPos = 0;
+  }
+  function showWyr() {
+    if (wyrPos >= wyrOrder.length) shuffleWyr();
+    document.getElementById('wyr-card').textContent = WYR[wyrOrder[wyrPos]];
+  }
+  document.getElementById('wyr-next').addEventListener('click', () => { wyrPos++; showWyr(); });
+  shuffleWyr();
+  showWyr();
+
+  /* ---------- Scoreboard ---------- */
+  let players = store.get('players', [
+    { name: 'Grandpa', score: 0 },
+    { name: 'Grandma', score: 0 },
+    { name: 'Mom', score: 0 },
+    { name: 'Granddaughter', score: 0 }
+  ]);
+
+  function renderPlayers() {
+    const wrap = document.getElementById('players');
+    wrap.innerHTML = '';
+    players.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'player';
+      const input = document.createElement('input');
+      input.value = p.name;
+      input.addEventListener('change', () => {
+        players[i].name = input.value || 'Player ' + (i + 1);
+        store.set('players', players);
+      });
+      const minus = document.createElement('button');
+      minus.className = 'pm';
+      minus.textContent = '−';
+      minus.addEventListener('click', () => {
+        players[i].score = Math.max(0, players[i].score - 1);
+        store.set('players', players);
+        score.textContent = players[i].score;
+      });
+      const score = document.createElement('div');
+      score.className = 'score';
+      score.textContent = p.score;
+      const plus = document.createElement('button');
+      plus.className = 'pm';
+      plus.textContent = '+';
+      plus.addEventListener('click', () => {
+        players[i].score++;
+        store.set('players', players);
+        score.textContent = players[i].score;
+      });
+      row.append(input, minus, score, plus);
+      wrap.appendChild(row);
+    });
+  }
+
+  document.getElementById('score-reset').addEventListener('click', () => {
+    if (confirm('Reset all scores to zero?')) {
+      players.forEach(p => p.score = 0);
+      store.set('players', players);
+      renderPlayers();
+    }
+  });
+  renderPlayers();
+</script>
+</body>
+</html>
